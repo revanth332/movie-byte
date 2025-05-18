@@ -35,6 +35,7 @@ const WatchMovie: React.FC = () => {
   const [peerId,setPeerId] = useState('');
   const peerInstance = useRef<Peer | null>(null);
   const [username,setUsername] = useState<string>("");
+  const [callingPeer,setCallingPeer] = useState<string>("");
 
 useEffect(() => {
   if(myVideoRef.current){
@@ -95,17 +96,6 @@ useEffect(() => {
     }
 
     startStream();
-
-    // const handleVideoStream = (data : {imageDataURL : string,roomId : string,username : string}) => {
-    //   // console.log(data)
-    //  if(data.roomId === roomId){
-    //   // setImgSrc(data.imageDataURL);
-    //   setUsers(prevUsers => prevUsers.map(user => user.userName === data.username ? {...user,videoSrc : data.imageDataURL} : user))
-    //   // console.log(data.imageDataURL)
-    //  }
-    // }
-
-    // --- Define event handlers ---
     
     const handlePeerConnection = () => {
       const peer = new Peer();
@@ -116,13 +106,14 @@ useEffect(() => {
         socket.emit("connect-peer",{id,roomId,username},(response: { success: boolean; message?: string; usersInfo?: UserProps[] }) => {
           if (response.success && response.usersInfo) {
             console.log(response.usersInfo);
+            console.log(users);
           setUsers(response.usersInfo.filter(user => user.userName !== username));
           }
         });
       })
 
       peer.on("call",async (call) => {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         call.answer(mediaStream);
       })
 
@@ -172,9 +163,6 @@ useEffect(() => {
           setError('Connection lost. Attempting to reconnect...');
           setIsLoading(true); // Show loading state while attempting reconnect
       }
-      // Clear users and movie URL on disconnect? Optional, depends on desired UX
-      // setUsers([]);
-      // setMovieUrl('');
     };
 
     const handleUserJoined = (newUser: UserProps) => {
@@ -192,6 +180,19 @@ useEffect(() => {
       setUsers((prevUsers) => prevUsers.filter((user) => user.userId !== userId));
     };
 
+    const handlePeerJoined = (usersInfo: UserProps[]) => {
+      console.log('Peer joined');
+        setUsers(usersInfo.filter(user => user.userName !== username));
+      }
+    
+    const handleTimerStopped = () => {
+      console.log('Timer stopped');
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+      setIsTimerRunning(false);
+    };
+
     // --- Register event listeners ---
     socket.on('connect', handleConnect);
     socket.on('connect_error', handleConnectError);
@@ -199,13 +200,9 @@ useEffect(() => {
     socket.on('userJoined', handleUserJoined);
     socket.on('userLeft', handleUserLeft);
     socket.on('timerStarted', handleTimerStarted);
-    // socket.on('timerStarted', handlePeerConnection);
-    // socket.on('video-stream', handleVideoStream);
+    socket.on('timerStopped', handleTimerStopped);
+    socket.on('peerJoined', handlePeerJoined);
 
-    // Cleanup function')
-
-    // --- Initial Join Attempt ---
-    // If already connected when effect runs, attempt to join immediately
     if (isConnected) {
         handleConnect(); // Call the handler directly
     } else {
@@ -234,33 +231,22 @@ useEffect(() => {
       socket.off('userJoined', handleUserJoined);
       socket.off('userLeft', handleUserLeft);
       socket.off('timerStarted', handleTimerStarted);
-      // socket.off('video-stream', handleVideoStream);
-
-      // **IMPORTANT**: Do NOT disconnect the socket here.
-      // The SocketProvider manages the connection lifecycle.
-
-      // Optional: Emit a 'leaveRoom' event if your backend needs explicit leave notification
-      // This is often handled by the 'disconnect' event on the server anyway
-      // if (socket && roomId) {
-      //   console.log(`Emitting leaveRoom for room ${roomId}`);
-      //   socket.emit('leaveRoom', roomId); // Make sure server handles 'leaveRoom'
-      // }
-
-      // Optional: Clear username on leaving the page?
-      // localStorage.removeItem('username');
+      socket.off('timerStopped', handleTimerStopped);
+      socket.off('peerJoined', handlePeerJoined);
     };
     // Dependencies: Re-run effect if socket instance changes or roomId changes
   }, [socket, roomId, navigate, isConnected]); // Added isConnected
 
   const callPeer = async (id : string) => {
     if(!peerInstance.current || !stream) return;
+    setCallingPeer(id)
     // var getUserMedia = navigator.mediaDevices.getUserMedia({video: true, audio: false})
       var call = peerInstance.current.call(id, stream);
       call.on('stream', (remoteStream) => {
-        // setUsers(prev => prev.map(user => user.peerId === id ? {...user,videoSrc : remoteStream} : user))
-        // if(remoteVideoRef.current){
-        //   remoteVideoRef.current.srcObject = remoteStream;
-        // }
+        console.log(remoteStream,remoteVideoRef.current)
+        if(remoteVideoRef.current){
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
         // Show stream in some video/canvas element.
       });
   }
@@ -297,6 +283,14 @@ useEffect(() => {
       });
     }, 1000); // Update every second
   }, []);
+
+  const stopTimer = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    setIsTimerRunning(false);
+    socket?.emit("timerStopped",{roomId});
+  }
 
   // Helper function to format Google Drive URL (keep as is)
   const getEmbedUrl = (url: string): string => {
@@ -373,7 +367,7 @@ useEffect(() => {
     >
       {/* Video Player Section */}
       <motion.div
-        className="lg:h-full lg:col-span-10 bg-black"
+        className="border lg:h-full lg:col-span-10 bg-black"
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, type: 'spring', damping: 15 }}
@@ -391,7 +385,7 @@ useEffect(() => {
             <div className='px-3 flex justify-between'>
               {
                 isTimerRunning
-                ? <button onClick={() => setIsTimerRunning(false)} className='bg-red-800 p-2 rounded-lg'>Stop Timer</button>
+                ? <button onClick={stopTimer} className='bg-red-800 p-2 rounded-lg'>Stop Timer</button>
                 : <button onClick={() => handleStartTimerClick()} className='bg-gray-800 p-2 rounded-lg'>Start Timer</button>
               }
               
@@ -407,19 +401,16 @@ useEffect(() => {
       </motion.div>
       {/* Users Section */}
       <motion.div
-        className="users-section border lg:col-span-2 p-3 bg-gray-800 border-t-2 border-gray-600 overflow-y-auto"
+        className="users-section h-[60%] lg:h-full border lg:col-span-2 p-3 bg-gray-800 border-t-2 border-gray-600 overflow-y-auto"
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.7, delay: 0.3 }}
       >
          <h3 className="text-lg font-semibold mb-3 text-center sticky top-0 bg-gray-800 py-1 z-10"> {/* Added z-index */}
-            Users in Room ({users.length})
+            Users in Room ({users.length+1})
          </h3>
          
             <div className="flex flex-col "> {/* Added padding-bottom */}
-                {/* <User key={"1234"} stream={stream} userId="1234" userName={username} peerId={peerId} ref={myVideoRef}/> */}
-                {/* <video className='border' autoPlay id="remoteVideo"></video> */}
-                {/* <img src={imgSrc} alt="remote video" /> */}
                 <motion.div
                   className=" m-2 rounded-md overflow-hidden shadow-lg bg-white"
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -449,7 +440,9 @@ useEffect(() => {
                   </div>
                 </motion.div>
 
-                <motion.div
+                {users.length > 0
+                ? users.map((user) => (
+                  <motion.div
                   className=" m-2 rounded-md overflow-hidden shadow-lg bg-white"
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -461,26 +454,23 @@ useEffect(() => {
                   >
                     {stream ? (
                       <video
-                        ref={remoteVideoRef}
+                        ref={callingPeer === user.peerId ? remoteVideoRef : null}
                         autoPlay
-                        muted
                         loop
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <span className="text-white text-sm">
-                        {username} - Video Feed 
+                        {user.userName} - Video Feed 
                       </span>
                     )}
                   </motion.div>
-                  <div className="p-2 bg-gray-700 text-white text-center text-sm">
-                     remote {peerId}
+                  <div  className='bg-gray-800'>
+                    <button onClick={() => callPeer(user.peerId || "")} className='bg-green-500 p-2 w-full'>
+                      call {user.userName}
+                    </button>
                   </div>
                 </motion.div>
-
-                {users.length > 0
-                ? users.map((user) => (
-                  <User key={user.userId} userId={user.userId} userName={user.userName} peerId={user.peerId} videoSrc={user.videoSrc} callPeer={callPeer} />
                ))
                 : <p className="text-center text-gray-400 mt-4">Waiting for others to join...</p>
               }

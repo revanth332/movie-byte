@@ -6,7 +6,7 @@ import cors from "cors";
 // Configuration
 const PORT = process.env.PORT || 3001;
 const CLIENT_ORIGIN =
-  process.env.CLIENT_ORIGIN || "https://lw38q7hc-5173.inc1.devtunnels.ms"; // Ensure this matches your React app's URL
+  process.env.CLIENT_ORIGIN || "https://lw38q7hc-5173.inc1.devtunnels.ms";
 
 // In-memory store for room details
 // Structure: { roomId: { movieUrl: string, users: [{ userId: string, userName: string }] } }
@@ -147,28 +147,34 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("timerStopped",(data) => {
+    io.to(data?.roomId).emit("timerStopped");
+  })
+
   socket.on("connect-peer", (data, callback) => {
     const room = rooms[data.roomId];
-    console.log(room,data, "peer");
+    console.log(room, data, "peer");
     if (!room) {
       console.warn(`Join room failed: Room ${data.roomId} not found.`);
       callback({
         success: false,
         message: "Room not found",
       });
+      return;
     }
 
-    const neWusers = room.users.map((user) =>
+    const neWusers = room?.users?.map((user) =>
       user.userName === data.username ? { ...user, peerId: data.id } : user
     );
     console.log(neWusers);
+    io.to(data.roomId).emit("peerJoined", neWusers);
     room.users = neWusers;
     callback({
       success: true,
       usersInfo: neWusers,
     });
   });
- 
+
   socket.on("video-stream", ({ imageDataURL, roomId, username }) => {
     console.log(imageDataURL?.length, roomId);
     io.to(roomId).emit("video-stream", { imageDataURL, roomId, username });
