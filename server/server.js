@@ -2,6 +2,8 @@ import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Configuration
 const PORT = process.env.PORT || 3001;
@@ -147,9 +149,9 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("timerStopped",(data) => {
+  socket.on("timerStopped", (data) => {
     io.to(data?.roomId).emit("timerStopped");
-  })
+  });
 
   socket.on("connect-peer", (data, callback) => {
     const room = rooms[data.roomId];
@@ -219,6 +221,10 @@ io.on("connection", (socket) => {
     // Broadcast to everyone in the room (including the sender)
     // that the timer has started with the specified duration.
     io.to(roomId).emit("timerStarted", { durationSeconds });
+  });
+
+  socket.on("sliderChange", (data) => {
+    io.to(data?.roomId).emit("sliderChange", data.value);
   });
 
   socket.on("roomstate", (roomId, callback) => {

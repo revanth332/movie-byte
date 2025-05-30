@@ -32,7 +32,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   useEffect(() => {
     // Establish connection only once when the provider mounts
     // Ensure you replace 'http://localhost:3001' with your actual server URL
-    const newSocket = io('https://lw38q7hc-3001.inc1.devtunnels.ms', {
+    const newSocket = io(import.meta.env.VITE_BACKEND_ORIGIN || 'https://lw38q7hc-3001.inc1.devtunnels.ms', {
       reconnectionAttempts: 5,
       reconnectionDelay: 3000,
       // Important: Prevents immediate connection if not needed yet

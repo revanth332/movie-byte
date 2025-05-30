@@ -49,6 +49,7 @@ const JoinRoom: React.FC = () => {
       if (response.success) {
         // Store username for WatchMovie page to retrieve
         localStorage.setItem("username", username);
+        localStorage.setItem("roomId", roomId);
         console.log(`Joining room: ${roomId} with username: ${username}`);
         // Navigate to the watch room page
         navigate(`/watch/${roomId}`);
