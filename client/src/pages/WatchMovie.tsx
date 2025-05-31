@@ -34,7 +34,7 @@ const WatchMovie: React.FC = () => {
   const myVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [peerId, setPeerId] = useState("");
+  // const [peerId, setPeerId] = useState("");
   const peerInstance = useRef<Peer | null>(null);
   const [username, setUsername] = useState<string>("");
   const [callingPeer, setCallingPeer] = useState<string>("");
@@ -89,7 +89,7 @@ const WatchMovie: React.FC = () => {
 
       peer.on("open", (id) => {
         console.log("peerId", id);
-        setPeerId(id);
+        // setPeerId(id);
         socket.emit(
           "connect-peer",
           { id, roomId, username },

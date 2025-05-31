@@ -1,10 +1,9 @@
-import { BrowserRouter as Router, Routes, Route, Link, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import CreateRoom from './pages/CreateRoom';
 import Home from './pages/Home';
 import WatchMovie from './pages/WatchMovie';
 import JoinRoom from './pages/JoinRoom';
 import { Toaster } from "@/components/ui/sonner"
-import VideoCall from './pages/VideoCall';
 
 function App() {
 
@@ -30,11 +29,6 @@ function App() {
                 Join Room
               </Link>
             </li>
-            <li>
-              <Link to="/video-call" className="hover:text-gray-300">
-                Video call
-              </Link>
-            </li>
           </ul>
         </nav>
 
@@ -43,7 +37,6 @@ function App() {
             <Route path="/create-room" element={<CreateRoom />} />
             <Route path="/join-room" element={<JoinRoom />} />
             <Route path="/watch/:roomId" element={<WatchMovie />} />
-            <Route path="/video-call" element={<VideoCall />} />
             <Route path="/" element={<Home />} />
           </Routes>
         </div>

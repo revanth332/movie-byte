@@ -5,7 +5,7 @@ import { useSocket } from '../context/SocketContext';
 
 const CreateRoom = () => {
   // Keep existing state
-  const [name, setName] = useState('');
+  // const [name, setName] = useState('');
   const [roomId, setRoomId] = useState('1234');
   const [movieLink, setMovieLink] = useState('https://drive.google.com/file/d/1uGq9lqCyLfODeKB7l5jLOnI9RHxqh0BR/preview');
   const [roomCreated, setRoomCreated] = useState<boolean>(false);
@@ -79,7 +79,7 @@ const CreateRoom = () => {
         console.log('Room created successfully!');
         setRoomCreated(true);
         // Reset form
-        setName('');
+        // setName('');
         setRoomId('');
         setMovieLink('');
         // Reset duration fields as well
